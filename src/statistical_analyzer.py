@@ -21,7 +21,6 @@ class StatisticalAnalyzer:
 
         for number in self.numbers:
             total += number
-
         return total / len(self.numbers)
 
     def calculate_median(self):
