@@ -1,0 +1,153 @@
+import numpy as np
+
+
+class NumpyFeatureProcessor:
+    """
+    A class for numerical feature processing using NumPy.
+    """
+
+    def __init__(self, data):
+        self.data = data
+        self.array = None
+        self.min_max_data = None
+        self.standardized_data = None
+
+    def validate_input(self):
+        """
+        Validate that input is a non-empty list
+        containing only numerical values.
+        """
+        if not isinstance(self.data, list):
+            raise ValueError("Input must be a list.")
+
+        if len(self.data) == 0:
+            raise ValueError("Input list cannot be empty.")
+
+        if not all(
+            isinstance(value, (int, float, np.number))
+            for value in self.data
+        ):
+            raise ValueError("Dataset contains non-numeric values.")
+
+    def convert_to_array(self):
+        """Convert the Python list into a NumPy array."""
+        self.array = np.array(self.data)
+
+    def get_array_info(self):
+        """Display NumPy array information."""
+        print("\nNumPy Array:")
+        print(self.array)
+
+        print("Data Type:", self.array.dtype)
+        print("Dimensions:", self.array.ndim)
+        print("Shape:", self.array.shape)
+        print("Size:", self.array.size)
+
+    def calculate_minimum(self):
+        """Calculate the minimum value."""
+        return np.min(self.array)
+
+    def calculate_maximum(self):
+        """Calculate the maximum value."""
+        return np.max(self.array)
+
+    def calculate_mean(self):
+        """Calculate the mean."""
+        return np.mean(self.array)
+
+    def calculate_standard_deviation(self):
+        """Calculate the standard deviation."""
+        return np.std(self.array)
+
+    def min_max_scale(self):
+        """
+        Perform Min-Max Scaling.
+
+        Formula:
+        (value - minimum) / (maximum - minimum)
+        """
+        minimum = self.calculate_minimum()
+        maximum = self.calculate_maximum()
+
+        if maximum == minimum:
+            raise ValueError(
+                "Cannot perform Min-Max Scaling when all values are identical."
+            )
+
+        self.min_max_data = (
+            self.array - minimum
+        ) / (maximum - minimum)
+
+        return self.min_max_data
+
+    def standardize(self):
+        """
+        Perform Z-Score Standardization.
+
+        Formula:
+        (value - mean) / standard deviation
+        """
+        mean = self.calculate_mean()
+        standard_deviation = self.calculate_standard_deviation()
+
+        if standard_deviation == 0:
+            raise ValueError(
+                "Cannot standardize data because standard deviation is zero."
+            )
+
+        self.standardized_data = (
+            self.array - mean
+        ) / standard_deviation
+
+        return self.standardized_data
+
+    def display_report(self):
+        """Display the complete feature processing report."""
+        minimum = self.calculate_minimum()
+        maximum = self.calculate_maximum()
+        mean = self.calculate_mean()
+        standard_deviation = self.calculate_standard_deviation()
+
+        min_max = self.min_max_scale()
+        standardized = self.standardize()
+
+        print("=" * 50)
+        print("         NUMPY FEATURE PROCESSING REPORT")
+        print("=" * 50)
+
+        print("\nOriginal Data:")
+        print(self.data)
+
+        self.get_array_info()
+
+        print("\nMinimum:", minimum)
+        print("Maximum:", maximum)
+        print("Mean:", mean)
+        print("Standard Deviation:", round(standard_deviation, 4))
+
+        print("\nMin-Max Scaled:")
+        print(np.round(min_max, 4))
+
+        print("\nZ-Score Standardized:")
+        print(np.round(standardized, 4))
+
+        print("\n" + "=" * 50)
+
+
+def main():
+    data = [10, 20, 30, 40, 50]
+
+    try:
+        obj = NumpyFeatureProcessor(data)
+
+        obj.validate_input()
+        obj.convert_to_array()
+        obj.display_report()
+
+    except ValueError as error:
+        print("Error:", error)
+
+
+if __name__ == "__main__":
+    main()
+    
