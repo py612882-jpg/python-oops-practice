@@ -1,153 +1,256 @@
 import numpy as np
 
 
-class NumpyFeatureProcessor:
-    """
-    A class for numerical feature processing using NumPy.
-    """
+class NumpyDatasetAnalyzer:
+    """Analyze a 2D numerical dataset using NumPy operations."""
 
     def __init__(self, data):
         self.data = data
         self.array = None
-        self.min_max_data = None
-        self.standardized_data = None
 
     def validate_input(self):
-        """
-        Validate that input is a non-empty list
-        containing only numerical values.
-        """
+        """Validate that the dataset is a non-empty 2D list of numeric values."""
         if not isinstance(self.data, list):
-            raise ValueError("Input must be a list.")
+            raise TypeError("Dataset must be a Python list of rows.")
 
         if len(self.data) == 0:
-            raise ValueError("Input list cannot be empty.")
+            raise ValueError("Dataset cannot be empty.")
 
-        if not all(
-            isinstance(value, (int, float, np.number))
-            for value in self.data
-        ):
-            raise ValueError("Dataset contains non-numeric values.")
+        if not all(isinstance(row, (list, tuple, np.ndarray)) for row in self.data):
+            raise TypeError("Each row must be a list-like collection of values.")
+
+        if any(len(row) == 0 for row in self.data):
+            raise ValueError("Each row must contain values.")
+
+        expected_columns = len(self.data[0])
+
+        for row_index, row in enumerate(self.data):
+            if len(row) != expected_columns:
+                raise ValueError(
+                    f"All rows must contain the same number of columns. Row {row_index} has {len(row)} values, expected {expected_columns}."
+                )
+
+            for value in row:
+                if isinstance(value, bool) or not isinstance(value, (int, float, np.integer, np.floating)):
+                    raise TypeError("Dataset contains non-numeric values.")
+
+        return True
 
     def convert_to_array(self):
-        """Convert the Python list into a NumPy array."""
-        self.array = np.array(self.data)
+        """Convert the validated dataset to a 2D NumPy array."""
+        self.validate_input()
+        self.array = np.asarray(self.data, dtype=float)
+        return self.array
 
-    def get_array_info(self):
-        """Display NumPy array information."""
-        print("\nNumPy Array:")
-        print(self.array)
+    def get_dataset_info(self):
+        """Return dataset metadata including size and dimensionality."""
+        if self.array is None:
+            self.convert_to_array()
 
-        print("Data Type:", self.array.dtype)
-        print("Dimensions:", self.array.ndim)
-        print("Shape:", self.array.shape)
-        print("Size:", self.array.size)
+        info = {
+            "rows": self.array.shape[0],
+            "columns": self.array.shape[1],
+            "dimensions": self.array.ndim,
+            "size": self.array.size,
+            "dtype": str(self.array.dtype),
+        }
 
-    def calculate_minimum(self):
-        """Calculate the minimum value."""
-        return np.min(self.array)
+        print("\n=== Dataset Information ===")
+        print(f"Rows       : {info['rows']}")
+        print(f"Columns    : {info['columns']}")
+        print(f"Dimensions : {info['dimensions']}")
+        print(f"Size       : {info['size']}")
+        print(f"Data Type  : {info['dtype']}")
 
-    def calculate_maximum(self):
-        """Calculate the maximum value."""
-        return np.max(self.array)
+        return info
 
-    def calculate_mean(self):
-        """Calculate the mean."""
-        return np.mean(self.array)
+    def get_column(self, column_index):
+        """Return a NumPy column selected by index."""
+        if self.array is None:
+            self.convert_to_array()
 
-    def calculate_standard_deviation(self):
-        """Calculate the standard deviation."""
-        return np.std(self.array)
+        if not 0 <= column_index < self.array.shape[1]:
+            raise IndexError("Column index is out of range.")
 
-    def min_max_scale(self):
-        """
-        Perform Min-Max Scaling.
+        return self.array[:, column_index]
 
-        Formula:
-        (value - minimum) / (maximum - minimum)
-        """
-        minimum = self.calculate_minimum()
-        maximum = self.calculate_maximum()
+    def get_row(self, row_index):
+        """Return a NumPy row selected by index."""
+        if self.array is None:
+            self.convert_to_array()
 
-        if maximum == minimum:
-            raise ValueError(
-                "Cannot perform Min-Max Scaling when all values are identical."
-            )
+        if not 0 <= row_index < self.array.shape[0]:
+            raise IndexError("Row index is out of range.")
 
-        self.min_max_data = (
-            self.array - minimum
-        ) / (maximum - minimum)
+        return self.array[row_index, :]
 
-        return self.min_max_data
+    def calculate_column_mean(self):
+        """Compute the mean for each feature (axis=0)."""
+        if self.array is None:
+            self.convert_to_array()
 
-    def standardize(self):
-        """
-        Perform Z-Score Standardization.
+        return np.mean(self.array, axis=0)
 
-        Formula:
-        (value - mean) / standard deviation
-        """
-        mean = self.calculate_mean()
-        standard_deviation = self.calculate_standard_deviation()
+    def calculate_column_minimum(self):
+        """Compute the minimum value for each feature (axis=0)."""
+        if self.array is None:
+            self.convert_to_array()
 
-        if standard_deviation == 0:
-            raise ValueError(
-                "Cannot standardize data because standard deviation is zero."
-            )
+        return np.min(self.array, axis=0)
 
-        self.standardized_data = (
-            self.array - mean
-        ) / standard_deviation
+    def calculate_column_maximum(self):
+        """Compute the maximum value for each feature (axis=0)."""
+        if self.array is None:
+            self.convert_to_array()
 
-        return self.standardized_data
+        return np.max(self.array, axis=0)
+
+    def calculate_column_std(self):
+        """Compute the standard deviation for each feature (axis=0)."""
+        if self.array is None:
+            self.convert_to_array()
+
+        return np.std(self.array, axis=0)
+
+    def scale_features(self):
+        """Apply independent Min-Max scaling to each feature column."""
+        if self.array is None:
+            self.convert_to_array()
+
+        scaled_array = self.array.copy().astype(float)
+
+        for column_index in range(self.array.shape[1]):
+            column = scaled_array[:, column_index]
+            minimum = np.min(column)
+            maximum = np.max(column)
+
+            if maximum == minimum:
+                scaled_array[:, column_index] = 0.0
+            else:
+                scaled_array[:, column_index] = (column - minimum) / (maximum - minimum)
+
+        return scaled_array
+
+    def feature_summary(self):
+        """Summarize mean, minimum, maximum, and standard deviation for each feature."""
+        if self.array is None:
+            self.convert_to_array()
+
+        means = self.calculate_column_mean()
+        minima = self.calculate_column_minimum()
+        maxima = self.calculate_column_maximum()
+        stds = self.calculate_column_std()
+
+        summary = {}
+        print("\n=== Feature Summary ===")
+
+        for i in range(self.array.shape[1]):
+            feature_key = f"Feature {i + 1}"
+            feature_stats = {
+                "mean": float(means[i]),
+                "minimum": float(minima[i]),
+                "maximum": float(maxima[i]),
+                "std": float(stds[i]),
+            }
+            summary[feature_key] = feature_stats
+            print(f"{feature_key}: mean={feature_stats['mean']}, min={feature_stats['minimum']}, max={feature_stats['maximum']}, std={feature_stats['std']}")
+
+        return summary
 
     def display_report(self):
-        """Display the complete feature processing report."""
-        minimum = self.calculate_minimum()
-        maximum = self.calculate_maximum()
-        mean = self.calculate_mean()
-        standard_deviation = self.calculate_standard_deviation()
+        """Print a complete analysis of the dataset."""
+        if self.array is None:
+            self.convert_to_array()
 
-        min_max = self.min_max_scale()
-        standardized = self.standardize()
+        info = self.get_dataset_info()
+        print("\nSelected Row 1:", self.get_row(0))
+        print("Selected Column 1:", self.get_column(0))
+        print("\nColumn Means:", self.calculate_column_mean())
+        print("Column Minimums:", self.calculate_column_minimum())
+        print("Column Maximums:", self.calculate_column_maximum())
+        print("Column Std Dev:", self.calculate_column_std())
+        print("\nScaled Features:\n", self.scale_features())
 
-        print("=" * 50)
-        print("         NUMPY FEATURE PROCESSING REPORT")
-        print("=" * 50)
+        feature_summary = self.feature_summary()
 
-        print("\nOriginal Data:")
-        print(self.data)
+        report = {
+            "dataset_info": info,
+            "row_0": self.get_row(0).tolist(),
+            "column_0": self.get_column(0).tolist(),
+            "column_means": self.calculate_column_mean().tolist(),
+            "column_minimums": self.calculate_column_minimum().tolist(),
+            "column_maximums": self.calculate_column_maximum().tolist(),
+            "column_std": self.calculate_column_std().tolist(),
+            "scaled_features": self.scale_features().tolist(),
+            "feature_summary": feature_summary,
+        }
 
-        self.get_array_info()
+        return report
 
-        print("\nMinimum:", minimum)
-        print("Maximum:", maximum)
-        print("Mean:", mean)
-        print("Standard Deviation:", round(standard_deviation, 4))
+    def split_features_target(self, target_index):
+        """Split the array into feature matrix X and target vector y."""
+        if self.array is None:
+            self.convert_to_array()
 
-        print("\nMin-Max Scaled:")
-        print(np.round(min_max, 4))
+        if target_index < 0 or target_index >= self.array.shape[1]:
+            raise IndexError("Target index is out of range for the available columns.")
 
-        print("\nZ-Score Standardized:")
-        print(np.round(standardized, 4))
+        X = np.delete(self.array, target_index, axis=1)
+        y = self.array[:, target_index]
+        return X, y
 
-        print("\n" + "=" * 50)
+
+def run_required_test_cases():
+    """Exercise the six required scenarios and validate the expected behavior."""
+    test_cases = [
+        ("Normal Dataset", [[25, 30000, 2], [30, 45000, 5], [35, 60000, 8]], None),
+        ("Single Row", [[25, 30000, 2]], None),
+        ("Unequal Columns", [[25, 30000], [30, 45000, 5]], "All rows must contain the same number of columns."),
+        ("Invalid Data", [[25, 30000, 2], [30, "45000", 5]], "Dataset contains non-numeric values."),
+        ("Empty Dataset", [], "Dataset cannot be empty."),
+        ("Constant Feature", [[25, 30000, 5], [30, 45000, 5], [35, 60000, 5]], None),
+    ]
+
+    results = []
+
+    for name, dataset, expected_error in test_cases:
+        try:
+            analyzer = NumpyDatasetAnalyzer(dataset)
+            analyzer.validate_input()
+            analyzer.convert_to_array()
+            if expected_error is not None:
+                raise AssertionError(f"{name}: Expected an error but validation succeeded.")
+            results.append((name, "PASS"))
+            print(f"{name}: PASS")
+        except Exception as error:
+            if expected_error is not None and str(error).startswith(expected_error[:10]):
+                results.append((name, "PASS (expected error)"))
+                print(f"{name}: PASS (expected error: {error})")
+            else:
+                results.append((name, f"FAIL: {error}"))
+                print(f"{name}: FAIL -> {error}")
+
+    return results
 
 
 def main():
-    data = [10, 20, 30, 40, 50]
+    """Run the sample dataset analysis and required validation tests."""
+    sample_dataset = [[25, 30000, 2], [30, 45000, 5], [35, 60000, 8], [40, 80000, 12], [45, 100000, 15]]
 
+    print("=== Required Test Cases ===")
+    run_required_test_cases()
+
+    print("\n=== Sample Dataset Analysis ===")
     try:
-        obj = NumpyFeatureProcessor(data)
-
-        obj.validate_input()
-        obj.convert_to_array()
-        obj.display_report()
-
-    except ValueError as error:
-        print("Error:", error)
+        analyzer = NumpyDatasetAnalyzer(sample_dataset)
+        analyzer.display_report()
+        print("\nSplit Example (target in final column):")
+        X, y = analyzer.split_features_target(target_index=2)
+        print("X =", X)
+        print("y =", y)
+    except (TypeError, ValueError, IndexError) as error:
+        print(f"Error: {error}")
 
 
 if __name__ == "__main__":
     main()
-    
