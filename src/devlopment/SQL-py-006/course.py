@@ -16,3 +16,6 @@ class Course:
             raise ValueError("Course name cannot be empty.")
 
         return True
+    def 
+    
+    
